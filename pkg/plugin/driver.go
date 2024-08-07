@@ -264,7 +264,7 @@ func (h *Clickhouse) MutateQuery(ctx context.Context, req backend.DataQuery) (co
 	}
 
 	loc, _ := time.LoadLocation(dataQuery.Meta.TimeZone)
-	return clickhouse.Context(ctx, clickhouse.WithUserLocation(loc)), req
+	return clickhouse.Context(ctx, clickhouse.WithUserLocation(loc), clickhouse.WithProgress()), req
 }
 
 // MutateResponse For any view other than traces we convert FieldTypeNullableJSON to string

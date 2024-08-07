@@ -17,7 +17,7 @@ import {
   vectorator,
 } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
-import { Observable, map } from 'rxjs';
+import { Observable } from 'rxjs';
 import { CHConfig } from 'types/config';
 import { EditorType, CHQuery } from 'types/sql';
 import {
@@ -47,8 +47,9 @@ import {
 import { generateSql, getColumnByHint, logAliasToColumnHints } from './sqlGenerator';
 import otel from 'otel';
 import { ReactNode } from 'react';
-import { transformQueryResponseWithTraceAndLogLinks } from './utils';
+// import { transformQueryResponseWithTraceAndLogLinks } from './utils';
 import { pluginVersion } from 'utils/version';
+import { queryStream } from './streaming';
 
 export class Datasource
   extends DataSourceWithBackend<CHQuery, CHConfig>
@@ -581,7 +582,7 @@ export class Datasource
     return this.values(frame);
   }
 
-  private getTimezone(request: DataQueryRequest<CHQuery>): string | undefined {
+ getTimezone(request: DataQueryRequest<CHQuery>): string | undefined {
     // timezone specified in the time picker
     if (request.timezone && request.timezone !== 'browser') {
       return request.timezone;
@@ -592,25 +593,28 @@ export class Datasource
   }
 
   query(request: DataQueryRequest<CHQuery>): Observable<DataQueryResponse> {
-    const targets = request.targets
-      // filters out queries disabled in UI
-      .filter((t) => t.hide !== true)
-      // attach timezone information
-      .map((t) => {
-        return {
-          ...t,
-          meta: {
-            ...t?.meta,
-            timezone: this.getTimezone(request),
-          },
-        };
-      });
-
-    return super.query({
-      ...request,
-      targets,
-    }).pipe(map((res: DataQueryResponse) => transformQueryResponseWithTraceAndLogLinks(this, request, res)));
+    return queryStream(this, request);
   }
+  // query(request: DataQueryRequest<CHQuery>): Observable<DataQueryResponse> {
+  //   const targets = request.targets
+  //     // filters out queries disabled in UI
+  //     .filter((t) => t.hide !== true)
+  //     // attach timezone information
+  //     .map((t) => {
+  //       return {
+  //         ...t,
+  //         meta: {
+  //           ...t?.meta,
+  //           timezone: this.getTimezone(request),
+  //         },
+  //       };
+  //     });
+
+  //   return super.query({
+  //     ...request,
+  //     targets,
+  //   }).pipe(map((res: DataQueryResponse) => transformQueryResponseWithTraceAndLogLinks(this, request, res)));
+  // }
 
   private runQuery(request: Partial<CHQuery>, options?: any): Promise<DataFrame> {
     return new Promise((resolve) => {

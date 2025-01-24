@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+
+## 4.6.0
+
+### Features
+
+- Add support for new Variant, Dynamic, and JSON types (https://github.com/grafana/clickhouse-datasource/pull/1108)
 
 ### Features
 

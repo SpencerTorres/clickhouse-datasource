@@ -27,7 +27,9 @@ import (
 )
 
 // Clickhouse defines how to connect to a Clickhouse datasource
-type Clickhouse struct{}
+type Clickhouse struct {
+	Progress chan ProgressPacket
+}
 
 // getTLSConfig returns tlsConfig from settings
 // logic reused from https://github.com/grafana/grafana/blob/615c153b3a2e4d80cff263e67424af6edb992211/pkg/models/datasource_cache.go#L211
@@ -247,6 +249,22 @@ func (h *Clickhouse) Settings(ctx context.Context, config backend.DataSourceInst
 	}
 }
 
+func (h *Clickhouse) handleProgress(queryID string) func(p *clickhouse.Progress) {
+	return func(p *clickhouse.Progress) {
+		select {
+		case h.Progress <- ProgressPacket{
+			QueryID:   queryID,
+			Rows:      p.Rows,
+			Bytes:     p.Bytes,
+			ElapsedMs: uint64(p.Elapsed.Milliseconds()),
+		}:
+		default:
+		}
+	}
+}
+
+var inc int
+
 func (h *Clickhouse) MutateQuery(ctx context.Context, req backend.DataQuery) (context.Context, backend.DataQuery) {
 	var dataQuery struct {
 		Meta struct {
@@ -263,8 +281,23 @@ func (h *Clickhouse) MutateQuery(ctx context.Context, req backend.DataQuery) (co
 		return ctx, req
 	}
 
+	var querySettings map[string]any
+	grafanaUser := backend.UserFromContext(ctx)
+	if grafanaUser != nil {
+		querySettings = make(map[string]any, 1)
+		querySettings["log_comment"] = grafanaUser.Login
+	}
+
+	inc++
+	queryID := fmt.Sprintf("grafana_%d_%d", time.Now().UTC().UnixMilli(), inc)
+
 	loc, _ := time.LoadLocation(dataQuery.Meta.TimeZone)
-	return clickhouse.Context(ctx, clickhouse.WithUserLocation(loc)), req
+	return clickhouse.Context(ctx,
+		clickhouse.WithUserLocation(loc),
+		clickhouse.WithQueryID(queryID),
+		clickhouse.WithProgress(h.handleProgress(queryID)),
+		clickhouse.WithSettings(querySettings),
+	), req
 }
 
 // MutateResponse For any view other than traces we convert FieldTypeNullableJSON to string

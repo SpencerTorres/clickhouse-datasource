@@ -4,6 +4,7 @@
   "name": "ClickHouse",
   "id": "grafana-clickhouse-datasource",
   "metrics": true,
+  "streaming": true,
   "backend": true,
   "logs": true,
   "tracing": true,

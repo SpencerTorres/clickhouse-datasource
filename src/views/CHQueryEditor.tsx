@@ -13,6 +13,7 @@ import { isBuilderOptionsRunnable, mapQueryBuilderOptionsToGrafanaFormat } from 
 import { setAllOptions, useBuilderOptionsState } from 'hooks/useBuilderOptionsState';
 import { pluginVersion } from 'utils/version';
 import { migrateCHQuery } from 'data/migration';
+import { useClickHouseStreamer } from './streaming';
 
 export type CHQueryEditorProps = QueryEditorProps<Datasource, CHQuery, CHConfig>;
 
@@ -22,6 +23,7 @@ export type CHQueryEditorProps = QueryEditorProps<Datasource, CHQuery, CHConfig>
 export const CHQueryEditor = (props: CHQueryEditorProps) => {
   const { datasource, query: savedQuery, onRunQuery } = props;
   const query = migrateCHQuery(savedQuery);
+  useClickHouseStreamer(props.datasource.uid);
 
   return (
     <>

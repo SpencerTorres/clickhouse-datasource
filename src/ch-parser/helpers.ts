@@ -132,3 +132,108 @@ export function isContinuationOctet(c: string): boolean {
 	const code = c.charCodeAt(0);
 	return (code & 0xC0) === 0x80;
 }
+
+/**
+ * Reads a quoted string with SQL style quoting
+ * In SQL style, quotes within the string are escaped by doubling them
+ * e.g., 'It''s a test' is parsed as "It's a test"
+ */
+export function readAnyQuotedString(text: string, quote: string, enableSqlStyleQuoting: boolean): string {
+    if (!text || text.length === 0 || text[0] !== quote) {
+        throw new Error(`Cannot parse quoted string: expected opening quote '${quote}', got '${text[0] || "EOF"}'`);
+    }
+
+    let result = '';
+    let pos = 1; // Skip the opening quote
+
+    while (pos < text.length) {
+        // Find the next escape character or quote
+        const nextEscapeOrQuote = text.indexOf(quote, pos);
+        const nextBackslash = text.indexOf('\\', pos);
+        
+        let nextSpecialChar = -1;
+        if (nextEscapeOrQuote !== -1 && (nextBackslash === -1 || nextEscapeOrQuote < nextBackslash)) {
+            nextSpecialChar = nextEscapeOrQuote;
+        } else if (nextBackslash !== -1) {
+            nextSpecialChar = nextBackslash;
+        }
+
+        if (nextSpecialChar === -1) {
+            // No more special characters, but we're missing the closing quote
+            throw new Error("Cannot parse quoted string: expected closing quote");
+        }
+
+        // Append everything up to the special character
+        result += text.substring(pos, nextSpecialChar);
+        pos = nextSpecialChar + 1;
+
+        if (pos >= text.length) {
+            throw new Error("Cannot parse quoted string: unexpected end of string");
+        }
+
+        if (text[nextSpecialChar] === quote) {
+            // Check for SQL style quoting (double quotes)
+            if (enableSqlStyleQuoting && pos < text.length && text[pos] === quote) {
+                result += quote;
+                pos++;
+            } else {
+                // This is the closing quote
+                return result;
+            }
+        } else if (text[nextSpecialChar] === '\\') {
+            // Handle escape sequences
+            if (pos < text.length) {
+                const escaped = this.parseEscapeSequence(text, pos);
+                result += escaped.char;
+                pos = escaped.newPos;
+            } else {
+                throw new Error("Cannot parse quoted string: unexpected end of escape sequence");
+            }
+        }
+    }
+
+    throw new Error("Cannot parse quoted string: expected closing quote");
+}
+
+/**
+ * Parses an escape sequence starting at the given position
+ */
+export function parseEscapeSequence(text: string, pos: number): { char: string, newPos: number } {
+    if (pos >= text.length) {
+        throw new Error("Unexpected end of escape sequence");
+    }
+
+    let newPos = pos + 1;
+    let result: string;
+
+    switch (text[pos]) {
+        case 'b': result = '\b'; break;
+        case 'f': result = '\f'; break;
+        case 'n': result = '\n'; break;
+        case 'r': result = '\r'; break;
+        case 't': result = '\t'; break;
+        case '0': result = '\0'; break;
+        case '\'': result = '\''; break;
+        case '\"': result = '\"'; break;
+        case '\\': result = '\\'; break;
+        default: 
+            // Just return the character as-is if not a recognized escape sequence
+            result = text[pos];
+    }
+
+    return { char: result, newPos };
+}
+
+/**
+ * Reads a double-quoted string with SQL style quoting
+ */
+export function readDoubleQuotedStringWithSQLStyle(text: string): string {
+    return readAnyQuotedString(text, '"', true);
+}
+
+/**
+ * Reads a back-quoted string with SQL style quoting
+ */
+export function readBackQuotedStringWithSQLStyle(text: string): string {
+    return readAnyQuotedString(text, '`', true);
+}

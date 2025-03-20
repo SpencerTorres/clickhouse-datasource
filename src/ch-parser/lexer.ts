@@ -1,4 +1,4 @@
-import { Token, TokenType } from './types';
+import { Token, TokenType } from './token';
 import {
   isWhitespaceASCII,
   isNumericASCII,

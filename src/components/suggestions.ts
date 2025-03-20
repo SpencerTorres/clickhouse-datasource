@@ -2,7 +2,7 @@ import { getTemplateSrv } from '@grafana/runtime';
 import { Monaco } from '@grafana/ui'
 import { Range, SchemaKind, Suggestion } from './sqlProvider';
 import { Lexer } from 'ch-parser/lexer';
-import { Token, TokenType } from 'ch-parser/types';
+import { Token, TokenType } from 'ch-parser/token';
 import { TableColumn } from 'types/queryBuilder';
 
 declare const monaco: Monaco;

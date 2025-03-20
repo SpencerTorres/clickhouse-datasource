@@ -83,10 +83,10 @@ const keywords = new Set([
  * A token representing a lexical unit in the input
  */
 export class Token {
-	type: TokenType;
-	begin: number;
-	end: number;
-	text: string;
+	public type: TokenType;
+	public begin: number;
+	public end: number;
+	public text: string;
 
 	constructor(type: TokenType, begin: number, end: number, text: string) {
 		this.type = type;
@@ -95,27 +95,19 @@ export class Token {
 		this.text = text;
 	}
 
-	size(): number {
+	public size(): number {
 		return this.end - this.begin;
 	}
 
-	isSignificant(): boolean {
+	public isSignificant(): boolean {
 		return this.type !== TokenType.Whitespace && this.type !== TokenType.Comment;
 	}
 
-	matchKeyword(keyword: string): boolean {
-		return this.type === TokenType.BareWord && keywords.has(keyword.toUpperCase()) && (this.text.toUpperCase() === keyword.toUpperCase());
-	}
-
-	isKeyword(): boolean {
-		return this.type === TokenType.BareWord && keywords.has(this.text.toUpperCase());
-	}
-
-	isError(): boolean {
+	public isError(): boolean {
 		return this.type > TokenType.EndOfStream;
 	}
 
-	isEnd(): boolean {
+	public isEnd(): boolean {
 		return this.type === TokenType.EndOfStream;
 	}
 }
